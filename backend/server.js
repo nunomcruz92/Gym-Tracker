@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // Conexão MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gym-tracker/api');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gym-tracker');
 
 // Modelo de Exercício
 const exerciseSchema = new mongoose.Schema({

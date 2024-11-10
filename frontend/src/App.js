@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Calendar, Clock, Dumbbell } from 'lucide-react';
 
-const API_URL = 'https://gym-tracker-backend-110k.onrender.com';
+const API_URL = 'https://gym-tracker-backend-110k.onrender.com/api';
 
 const GymTracker = () => {
   const [exercises, setExercises] = useState([]);
