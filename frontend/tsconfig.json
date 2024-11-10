@@ -3,6 +3,7 @@
     "baseUrl": ".", // Define a raiz do projeto
     "paths": {
       "@/*": ["src/*"] // Configura o alias '@' para apontar para a pasta 'src'
-    }
+    },
+    "jsx": "react-jsx"
   }
 }
