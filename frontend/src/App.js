@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Calendar, Clock, Dumbbell } from 'lucide-react';
+import { Calendar, Clock, Dumbbell, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const API_URL = 'https://gym-tracker-backend-110k.onrender.com/api';
 
@@ -11,6 +14,11 @@ const GymTracker = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [newMachine, setNewMachine] = useState({
+    name: '',
+    image: '',
+    notes: ''
+  });
   const [newExercise, setNewExercise] = useState({
     machineName: '',
     weight: '',
@@ -33,7 +41,6 @@ const GymTracker = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Exercícios carregados:', data);
       setExercises(data);
     } catch (error) {
       console.error('Erro ao buscar exercícios:', error);
@@ -50,7 +57,6 @@ const GymTracker = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Máquinas carregadas:', data);
       setMachines(data);
     } catch (error) {
       console.error('Erro ao buscar máquinas:', error);
@@ -63,7 +69,6 @@ const GymTracker = () => {
     setError(null);
     setSuccessMessage('');
 
-    // Validação básica
     if (!newExercise.machineName || !newExercise.weight || !newExercise.reps || !newExercise.sets) {
       setError('Por favor, preencha todos os campos obrigatórios.');
       setIsLoading(false);
@@ -71,8 +76,6 @@ const GymTracker = () => {
     }
 
     try {
-      console.log('Enviando exercício:', newExercise);
-      
       const exerciseData = {
         ...newExercise,
         date: new Date().toISOString(),
@@ -95,12 +98,9 @@ const GymTracker = () => {
       }
 
       const result = await response.json();
-      console.log('Resposta do servidor:', result);
-      
       setSuccessMessage('Exercício salvo com sucesso!');
-      fetchExercises(); // Atualiza a lista de exercícios
+      fetchExercises();
       
-      // Limpa o formulário
       setNewExercise({
         machineName: '',
         weight: '',
@@ -117,22 +117,72 @@ const GymTracker = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleMachineSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    
+    if (!newMachine.name) {
+      setError('Por favor, preencha o nome da máquina.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/machines`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newMachine)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar máquina');
+      }
+
+      await response.json();
+      setSuccessMessage('Máquina adicionada com sucesso!');
+      fetchMachines();
+      
+      setNewMachine({
+        name: '',
+        image: '',
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar máquina:', error);
+      setError('Falha ao adicionar máquina. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = (e, setStateFunction) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewExercise({ ...newExercise, machineImage: reader.result });
+        setStateFunction(prev => ({ ...prev, image: reader.result }));
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleMachineSelect = (value) => {
+    const selectedMachine = machines.find(m => m.name === value);
+    setNewExercise({
+      ...newExercise,
+      machineName: value,
+      machineImage: selectedMachine?.image || '',
+      machineNotes: selectedMachine?.notes || ''
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">GymTracker</h1>
       
-      {/* Tabs */}
       <div className="border-b mb-4">
         <nav className="flex space-x-4">
           {['workout', 'stats', 'machines'].map((tab) => (
@@ -154,33 +204,40 @@ const GymTracker = () => {
         </nav>
       </div>
 
-      {/* Mensagens de Erro e Sucesso */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+      
       {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {successMessage}
-        </div>
+        <Alert className="mb-4 bg-green-100 border-green-400">
+          <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
       )}
 
-      {/* Workout Tab */}
       {activeTab === 'workout' && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-2">Novo Exercício</h2>
           <p className="text-gray-600 mb-4">Registre seu treino de hoje</p>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Nome da Máquina *"
+            <Select 
               value={newExercise.machineName}
-              onChange={(e) => setNewExercise({...newExercise, machineName: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
+              onValueChange={handleMachineSelect}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione uma máquina *" />
+              </SelectTrigger>
+              <SelectContent>
+                {machines.map((machine) => (
+                  <SelectItem key={machine._id} value={machine.name}>
+                    {machine.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <div className="grid grid-cols-3 gap-4">
               <input
                 type="number"
@@ -207,19 +264,6 @@ const GymTracker = () => {
                 required
               />
             </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="w-full p-2 border rounded"
-            />
-            <input
-              type="text"
-              placeholder="Notas sobre a máquina"
-              value={newExercise.machineNotes}
-              onChange={(e) => setNewExercise({...newExercise, machineNotes: e.target.value})}
-              className="w-full p-2 border rounded"
-            />
             <button
               type="submit"
               disabled={isLoading}
@@ -235,7 +279,6 @@ const GymTracker = () => {
         </div>
       )}
 
-      {/* Stats Tab */}
       {activeTab === 'stats' && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-2">Progresso</h2>
@@ -258,30 +301,80 @@ const GymTracker = () => {
         </div>
       )}
 
-      {/* Machines Tab */}
       {activeTab === 'machines' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {machines.length > 0 ? (
-            machines.map((machine, index) => (
-              <div key={machine._id || index} className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-lg font-semibold mb-2">{machine.name}</h3>
-                {machine.image && (
-                  <img
-                    src={machine.image}
-                    alt={machine.name}
-                    className="w-full h-48 object-cover rounded-md mb-4"
+        <div>
+          <div className="mb-6">
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                  <Plus className="w-4 h-4" />
+                  Adicionar Nova Máquina
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Nova Máquina</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleMachineSubmit} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Nome da Máquina *"
+                    value={newMachine.name}
+                    onChange={(e) => setNewMachine({...newMachine, name: e.target.value})}
+                    className="w-full p-2 border rounded"
+                    required
                   />
-                )}
-                <p className="text-gray-600">{machine.notes}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">Nenhuma máquina cadastrada ainda.</p>
-          )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, setNewMachine)}
+                    className="w-full p-2 border rounded"
+                  />
+                  <textarea
+                    placeholder="Notas sobre a máquina"
+                    value={newMachine.notes}
+                    onChange={(e) => setNewMachine({...newMachine, notes: e.target.value})}
+                    className="w-full p-2 border rounded"
+                    rows={3}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`w-full py-2 px-4 rounded ${
+                      isLoading 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    {isLoading ? 'Salvando...' : 'Adicionar Máquina'}
+                  </button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {machines.length > 0 ? (
+              machines.map((machine, index) => (
+                <div key={machine._id || index} className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-lg font-semibold mb-2">{machine.name}</h3>
+                  {machine.image && (
+                    <img
+                      src={machine.image}
+                      alt={machine.name}
+                      className="w-full h-48 object-cover rounded-md mb-4"
+                    />
+                  )}
+                  <p className="text-gray-600">{machine.notes}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">Nenhuma máquina cadastrada ainda.</p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Loading Indicator */}
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-blue-200">
           <div className="h-full bg-blue-500 animate-[loading_1s_ease-in-out_infinite]" style={{width: '30%'}} />
@@ -290,15 +383,5 @@ const GymTracker = () => {
     </div>
   );
 };
-
-// Adicione esta keyframe animation ao seu CSS
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes loading {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(400%); }
-  }
-`;
-document.head.appendChild(style);
 
 export default GymTracker;
