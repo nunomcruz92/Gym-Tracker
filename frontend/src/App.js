@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Calendar, Clock, Dumbbell, User } from 'lucide-react';
+import { Calendar, Clock, Dumbbell } from 'lucide-react';
 import { 
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -13,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Instead of using process.env, we'll hardcode the API URL for this demo
+// In a real application, you would configure this through your deployment platform
+const API_URL = 'https://gym-tracker-backend-110k.onrender.com';
 
 const GymTracker = () => {
   const [exercises, setExercises] = useState([]);
@@ -89,21 +90,21 @@ const GymTracker = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">GymTracker</h1>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="workout">
-            <Dumbbell className="mr-2" />
+          <TabsTrigger value="workout" className="flex items-center">
+            <Dumbbell className="w-4 h-4 mr-2" />
             Treino
           </TabsTrigger>
-          <TabsTrigger value="stats">
-            <Clock className="mr-2" />
+          <TabsTrigger value="stats" className="flex items-center">
+            <Clock className="w-4 h-4 mr-2" />
             Estatísticas
           </TabsTrigger>
-          <TabsTrigger value="machines">
-            <Calendar className="mr-2" />
+          <TabsTrigger value="machines" className="flex items-center">
+            <Calendar className="w-4 h-4 mr-2" />
             Máquinas
           </TabsTrigger>
         </TabsList>
@@ -116,13 +117,12 @@ const GymTracker = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Input
-                    placeholder="Nome da Máquina"
-                    value={newExercise.machineName}
-                    onChange={(e) => setNewExercise({...newExercise, machineName: e.target.value})}
-                  />
-                </div>
+                <Input
+                  placeholder="Nome da Máquina"
+                  value={newExercise.machineName}
+                  onChange={(e) => setNewExercise({...newExercise, machineName: e.target.value})}
+                  className="w-full"
+                />
                 <div className="grid grid-cols-3 gap-4">
                   <Input
                     type="number"
@@ -143,21 +143,19 @@ const GymTracker = () => {
                     onChange={(e) => setNewExercise({...newExercise, sets: e.target.value})}
                   />
                 </div>
-                <div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </div>
-                <div>
-                  <Input
-                    placeholder="Notas sobre a máquina"
-                    value={newExercise.machineNotes}
-                    onChange={(e) => setNewExercise({...newExercise, machineNotes: e.target.value})}
-                  />
-                </div>
-                <Button type="submit">Salvar Exercício</Button>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="w-full"
+                />
+                <Input
+                  placeholder="Notas sobre a máquina"
+                  value={newExercise.machineNotes}
+                  onChange={(e) => setNewExercise({...newExercise, machineNotes: e.target.value})}
+                  className="w-full"
+                />
+                <Button type="submit" className="w-full">Salvar Exercício</Button>
               </form>
             </CardContent>
           </Card>
@@ -170,7 +168,7 @@ const GymTracker = () => {
               <CardDescription>Acompanhe sua evolução</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
+              <div className="h-96">
                 <LineChart data={exercises} width={800} height={400}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
@@ -186,8 +184,8 @@ const GymTracker = () => {
 
         <TabsContent value="machines">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {machines.map((machine) => (
-              <Card key={machine._id}>
+            {machines.map((machine, index) => (
+              <Card key={machine._id || index}>
                 <CardHeader>
                   <CardTitle>{machine.name}</CardTitle>
                 </CardHeader>
