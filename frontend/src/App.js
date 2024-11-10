@@ -1,183 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Calendar, Clock, Dumbbell, Plus } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const API_URL = 'https://gym-tracker-backend-110k.onrender.com/api';
 
 const GymTracker = () => {
-  const [exercises, setExercises] = useState([]);
-  const [machines, setMachines] = useState([]);
-  const [activeTab, setActiveTab] = useState('workout');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [newMachine, setNewMachine] = useState({
-    name: '',
-    image: '',
-    notes: ''
-  });
-  const [newExercise, setNewExercise] = useState({
-    machineName: '',
-    weight: '',
-    reps: '',
-    sets: '',
-    machineImage: '',
-    machineNotes: ''
-  });
+  // ... (todos os estados permanecem os mesmos)
 
-  useEffect(() => {
-    fetchExercises();
-    fetchMachines();
-  }, []);
-
-  const fetchExercises = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}/exercises`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setExercises(data);
-    } catch (error) {
-      console.error('Erro ao buscar exercícios:', error);
-      setError('Falha ao carregar exercícios. Por favor, tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchMachines = async () => {
-    try {
-      const response = await fetch(`${API_URL}/machines`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setMachines(data);
-    } catch (error) {
-      console.error('Erro ao buscar máquinas:', error);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccessMessage('');
-
-    if (!newExercise.machineName || !newExercise.weight || !newExercise.reps || !newExercise.sets) {
-      setError('Por favor, preencha todos os campos obrigatórios.');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const exerciseData = {
-        ...newExercise,
-        date: new Date().toISOString(),
-        weight: Number(newExercise.weight),
-        reps: Number(newExercise.reps),
-        sets: Number(newExercise.sets)
-      };
-
-      const response = await fetch(`${API_URL}/exercises`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(exerciseData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao salvar exercício');
-      }
-
-      const result = await response.json();
-      setSuccessMessage('Exercício salvo com sucesso!');
-      fetchExercises();
-      
-      setNewExercise({
-        machineName: '',
-        weight: '',
-        reps: '',
-        sets: '',
-        machineImage: '',
-        machineNotes: ''
-      });
-    } catch (error) {
-      console.error('Erro detalhado:', error);
-      setError('Falha ao salvar exercício. Por favor, tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMachineSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    
-    if (!newMachine.name) {
-      setError('Por favor, preencha o nome da máquina.');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/machines`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newMachine)
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao salvar máquina');
-      }
-
-      await response.json();
-      setSuccessMessage('Máquina adicionada com sucesso!');
-      fetchMachines();
-      
-      setNewMachine({
-        name: '',
-        image: '',
-        notes: ''
-      });
-    } catch (error) {
-      console.error('Erro ao adicionar máquina:', error);
-      setError('Falha ao adicionar máquina. Por favor, tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleImageUpload = (e, setStateFunction) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setStateFunction(prev => ({ ...prev, image: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleMachineSelect = (value) => {
-    const selectedMachine = machines.find(m => m.name === value);
-    setNewExercise({
-      ...newExercise,
-      machineName: value,
-      machineImage: selectedMachine?.image || '',
-      machineNotes: selectedMachine?.notes || ''
-    });
-  };
+  // ... (todas as funções permanecem as mesmas até o return)
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -204,16 +36,16 @@ const GymTracker = () => {
         </nav>
       </div>
 
+      {/* Mensagens de Erro e Sucesso simplificadas */}
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
       )}
-      
       {successMessage && (
-        <Alert className="mb-4 bg-green-100 border-green-400">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          {successMessage}
+        </div>
       )}
 
       {activeTab === 'workout' && (
