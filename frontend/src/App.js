@@ -1,15 +1,183 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Calendar, Clock, Dumbbell, Plus } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const API_URL = 'https://gym-tracker-backend-110k.onrender.com/api';
 
 const GymTracker = () => {
-  // ... (todos os estados permanecem os mesmos)
+  const [exercises, setExercises] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [activeTab, setActiveTab] = useState('workout');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showMachineModal, setShowMachineModal] = useState(false);
+  const [newMachine, setNewMachine] = useState({
+    name: '',
+    image: '',
+    notes: ''
+  });
+  const [newExercise, setNewExercise] = useState({
+    machineName: '',
+    weight: '',
+    reps: '',
+    sets: '',
+    machineImage: '',
+    machineNotes: ''
+  });
 
-  // ... (todas as funções permanecem as mesmas até o return)
+  useEffect(() => {
+    fetchExercises();
+    fetchMachines();
+  }, []);
+
+  const fetchExercises = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/exercises`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setExercises(data);
+    } catch (error) {
+      console.error('Erro ao buscar exercícios:', error);
+      setError('Falha ao carregar exercícios. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchMachines = async () => {
+    try {
+      const response = await fetch(`${API_URL}/machines`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setMachines(data);
+    } catch (error) {
+      console.error('Erro ao buscar máquinas:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage('');
+
+    if (!newExercise.machineName || !newExercise.weight || !newExercise.reps || !newExercise.sets) {
+      setError('Por favor, preencha todos os campos obrigatórios.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const exerciseData = {
+        ...newExercise,
+        date: new Date().toISOString(),
+        weight: Number(newExercise.weight),
+        reps: Number(newExercise.reps),
+        sets: Number(newExercise.sets)
+      };
+
+      const response = await fetch(`${API_URL}/exercises`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(exerciseData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao salvar exercício');
+      }
+
+      const result = await response.json();
+      setSuccessMessage('Exercício salvo com sucesso!');
+      fetchExercises();
+      
+      setNewExercise({
+        machineName: '',
+        weight: '',
+        reps: '',
+        sets: '',
+        machineImage: '',
+        machineNotes: ''
+      });
+    } catch (error) {
+      console.error('Erro detalhado:', error);
+      setError('Falha ao salvar exercício. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMachineSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    
+    if (!newMachine.name) {
+      setError('Por favor, preencha o nome da máquina.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/machines`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newMachine)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar máquina');
+      }
+
+      await response.json();
+      setSuccessMessage('Máquina adicionada com sucesso!');
+      fetchMachines();
+      setShowMachineModal(false);
+      
+      setNewMachine({
+        name: '',
+        image: '',
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar máquina:', error);
+      setError('Falha ao adicionar máquina. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = (e, setStateFunction) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStateFunction(prev => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMachineSelect = (e) => {
+    const value = e.target.value;
+    const selectedMachine = machines.find(m => m.name === value);
+    setNewExercise({
+      ...newExercise,
+      machineName: value,
+      machineImage: selectedMachine?.image || '',
+      machineNotes: selectedMachine?.notes || ''
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -36,7 +204,6 @@ const GymTracker = () => {
         </nav>
       </div>
 
-      {/* Mensagens de Erro e Sucesso simplificadas */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -54,21 +221,19 @@ const GymTracker = () => {
           <p className="text-gray-600 mb-4">Registre seu treino de hoje</p>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Select 
+            <select
               value={newExercise.machineName}
-              onValueChange={handleMachineSelect}
+              onChange={handleMachineSelect}
+              className="w-full p-2 border rounded"
+              required
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione uma máquina *" />
-              </SelectTrigger>
-              <SelectContent>
-                {machines.map((machine) => (
-                  <SelectItem key={machine._id} value={machine.name}>
-                    {machine.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">Selecione uma máquina *</option>
+              {machines.map((machine) => (
+                <option key={machine._id} value={machine.name}>
+                  {machine.name}
+                </option>
+              ))}
+            </select>
 
             <div className="grid grid-cols-3 gap-4">
               <input
@@ -136,53 +301,13 @@ const GymTracker = () => {
       {activeTab === 'machines' && (
         <div>
           <div className="mb-6">
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Nova Máquina
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Adicionar Nova Máquina</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleMachineSubmit} className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Nome da Máquina *"
-                    value={newMachine.name}
-                    onChange={(e) => setNewMachine({...newMachine, name: e.target.value})}
-                    className="w-full p-2 border rounded"
-                    required
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, setNewMachine)}
-                    className="w-full p-2 border rounded"
-                  />
-                  <textarea
-                    placeholder="Notas sobre a máquina"
-                    value={newMachine.notes}
-                    onChange={(e) => setNewMachine({...newMachine, notes: e.target.value})}
-                    className="w-full p-2 border rounded"
-                    rows={3}
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className={`w-full py-2 px-4 rounded ${
-                      isLoading 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
-                  >
-                    {isLoading ? 'Salvando...' : 'Adicionar Máquina'}
-                  </button>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <button
+              onClick={() => setShowMachineModal(true)}
+              className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar Nova Máquina
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -203,6 +328,57 @@ const GymTracker = () => {
             ) : (
               <p className="text-gray-500">Nenhuma máquina cadastrada ainda.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal para adicionar máquina */}
+      {showMachineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Adicionar Nova Máquina</h2>
+              <button
+                onClick={() => setShowMachineModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleMachineSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Nome da Máquina *"
+                value={newMachine.name}
+                onChange={(e) => setNewMachine({...newMachine, name: e.target.value})}
+                className="w-full p-2 border rounded"
+                required
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e, setNewMachine)}
+                className="w-full p-2 border rounded"
+              />
+              <textarea
+                placeholder="Notas sobre a máquina"
+                value={newMachine.notes}
+                onChange={(e) => setNewMachine({...newMachine, notes: e.target.value})}
+                className="w-full p-2 border rounded"
+                rows={3}
+              />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`w-full py-2 px-4 rounded ${
+                  isLoading 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                {isLoading ? 'Salvando...' : 'Adicionar Máquina'}
+              </button>
+            </form>
           </div>
         </div>
       )}
